@@ -140,15 +140,18 @@ CELERY_TIMEZONE = 'UTC'
 
 
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ),
+    # ACTIVAMOS LAS CLASES DE THROTTLING GLOBALES
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',  # Para usuarios no autenticados (Anónimos)
+        'rest_framework.throttling.UserRateThrottle',  # Para usuarios logueados
+    ],
     
-    # 2. Tu limitador de peticiones (Throttling) que querías para evitar spam
+    # DEFINIMOS LOS LÍMITES DE VELOCIDAD (RATE LIMITS)
     'DEFAULT_THROTTLE_RATES': {
-        'anon': '5/minute',  # Máximo 5 registros por minuto para anónimos
-        'user': '100/day',
+        'anon': '5/minute',  # <--- ESTA ES LA REGLA QUE EVALÚA TU TEST (5 por minuto)
+        'user': '10/minute',
     },
+    'EXCEPTION_HANDLER': 'notificaciones.utils.exceptions.custom_exception',
 }
 
 from datetime import timedelta
@@ -159,3 +162,40 @@ SIMPLE_JWT = {
 
 # Si querés ver el contenido del correo en tu consola (IDE) sin enviarlo realmente:
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+
+# ==============================================================================
+# CONFIGURACIÓN DE LOGGING (SISTEMA DE BITÁCORA)
+# ==============================================================================
+import os
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    
+    # 1. FORMATTERS: El diseño y los datos de cada línea del log
+    'formatters':{
+        'verbose':{
+            'format': '{asctime} [{levelname}] {module} (PID {process:d}): {message}',
+            'style': '{'
+        },
+    },
+    
+    # 2. HANDLERS: El destino físico de los mensajes   
+    'handlers':{
+        'file':{
+            'level': 'WARNING',  # Captura eventos de nivel WARNING y ERROR
+            'class': 'logging.FileHandler',
+            # Usamos BASE_DIR para que sea portable en Docker/Producción
+            'filename': os.path.join(BASE_DIR, 'debug.log'),
+            'formatter': 'verbose',
+        },
+    },
+
+      # 3. LOGGERS: El receptor global del sistema
+    'root': {
+        'handlers': ['file'],
+        'level': 'WARNING',
+    
+    },
+}

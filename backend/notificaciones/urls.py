@@ -4,5 +4,5 @@ from .views import ClienteCreateView
 
 urlpatterns = [
     
-    path('api/crear-view/', ClienteCreateView.as_view(), name="crear_view"),
+    path('api/clientes/regiistro/', ClienteCreateView.as_view(), name="registro_usuario"),
 ]

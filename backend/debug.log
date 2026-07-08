@@ -1,0 +1,51 @@
+2026-07-08 22:52:05,628 [WARNING] log (PID 52529): Unauthorized: /api/crear-view/
+2026-07-08 22:52:05,633 [WARNING] log (PID 52529): Unauthorized: /api/crear-view/
+2026-07-08 22:57:59,558 [WARNING] log (PID 52547): Bad Request: /api/crear-view/
+2026-07-08 23:04:55,849 [WARNING] log (PID 52555): Method Not Allowed: /api/crear-view/
+2026-07-08 23:04:56,276 [ERROR] log (PID 52555): Internal Server Error: /api/crear-view/
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.11/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/django/views/decorators/csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/django/views/generic/base.py", line 105, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/rest_framework/views.py", line 517, in dispatch
+    self.response = self.finalize_response(request, response, *args, **kwargs)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/rest_framework/views.py", line 429, in finalize_response
+    assert isinstance(response, HttpResponseBase), (
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Expected a `Response`, `HttpResponse` or `StreamingHttpResponse` to be returned from the view, but received a `<class 'NoneType'>`
+2026-07-08 23:04:56,495 [WARNING] log (PID 52555): Bad Request: /api/crear-view/
+2026-07-08 23:07:43,079 [WARNING] log (PID 52983): Method Not Allowed: /api/crear-view/
+2026-07-08 23:07:44,476 [WARNING] log (PID 52983): Bad Request: /api/crear-view/
+2026-07-08 23:11:23,321 [WARNING] log (PID 56368): Method Not Allowed: /api/crear-view/
+2026-07-08 23:11:23,833 [WARNING] log (PID 56368): Bad Request: /api/crear-view/
+2026-07-08 23:20:15,275 [WARNING] log (PID 62157): Bad Request: /api/crear-view/
+2026-07-08 23:20:15,446 [WARNING] log (PID 62157): Method Not Allowed: /api/crear-view/
+2026-07-08 23:20:15,596 [WARNING] log (PID 62157): Method Not Allowed: /api/crear-view/
+2026-07-08 23:26:11,464 [WARNING] log (PID 65808): Bad Request: /api/clientes/regiistro/
+2026-07-08 23:26:11,709 [WARNING] log (PID 65808): Method Not Allowed: /api/clientes/regiistro/
+2026-07-08 23:26:11,889 [WARNING] log (PID 65808): Method Not Allowed: /api/clientes/regiistro/
+2026-07-08 23:29:22,245 [WARNING] log (PID 67762): Method Not Allowed: /api/clientes/regiistro/
+2026-07-08 23:29:22,259 [WARNING] log (PID 67762): Method Not Allowed: /api/clientes/regiistro/
+2026-07-08 23:29:22,264 [WARNING] log (PID 67762): Method Not Allowed: /api/clientes/regiistro/
+2026-07-08 23:31:09,306 [WARNING] log (PID 68837): Method Not Allowed: /api/clientes/regiistro/
+2026-07-08 23:31:09,320 [WARNING] log (PID 68837): Method Not Allowed: /api/clientes/regiistro/
+2026-07-08 23:31:09,325 [WARNING] log (PID 68837): Method Not Allowed: /api/clientes/regiistro/
+2026-07-08 23:33:09,656 [WARNING] log (PID 70049): Bad Request: /api/clientes/regiistro/
+2026-07-08 23:33:09,673 [WARNING] log (PID 70049): Bad Request: /api/clientes/regiistro/
+2026-07-08 23:33:09,679 [WARNING] log (PID 70049): Bad Request: /api/clientes/regiistro/
+2026-07-08 23:35:11,374 [WARNING] log (PID 71206): Bad Request: /api/clientes/regiistro/
+2026-07-08 23:37:08,418 [WARNING] log (PID 72452): Too Many Requests: /api/clientes/regiistro/
+2026-07-08 23:37:08,423 [WARNING] log (PID 72452): Too Many Requests: /api/clientes/regiistro/
+2026-07-08 23:37:08,430 [WARNING] log (PID 72452): Too Many Requests: /api/clientes/regiistro/
+2026-07-08 23:38:54,349 [WARNING] log (PID 73570): Too Many Requests: /api/clientes/regiistro/
+2026-07-08 23:38:54,507 [WARNING] log (PID 73570): Bad Request: /api/clientes/regiistro/
