@@ -1,0 +1,24 @@
+# Entornos virtuales
+venv/
+env/
+.venv/
+
+# Python / Django
+__pycache__/
+*.py[cod]
+db.sqlite3
+media/
+static/
+
+# Docker
+.docker/
+docker-compose.override.yml
+
+# IDEs
+.vscode/
+.idea/
+
+# Carpetas de caché del sistema
+.DS_Store
+.pytest_cache/
+.coverage

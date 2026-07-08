@@ -1,0 +1,60 @@
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: Mami_pro42
+      POSTGRES_DB: mi_base_de_datos
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:alpine
+
+  web:
+    build: .
+    working_dir: /app/backend
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings
+      - PYTHONPATH=/app:/app/backend
+    depends_on:
+      - db
+      - redis
+
+  worker:
+    build: .
+    working_dir: /app/backend
+    command: celery -A config worker --loglevel=info
+    volumes:
+      - .:/app
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - DJANGO_SETTINGS_MODULE=config.settings
+      - PYTHONPATH=/app:/app/backend
+    depends_on:
+      - redis
+      - db
+
+  flower:
+    build: .
+    working_dir: /app/backend
+    command: celery -A config flower --port=5555
+    ports:
+      - "5555:5555"
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - DJANGO_SETTINGS_MODULE=config.settings
+      - PYTHONPATH=/app:/app/backend
+    depends_on:
+      - redis
+      - worker
+
+volumes:
+  postgres_data:
