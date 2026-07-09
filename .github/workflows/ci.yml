@@ -6,16 +6,33 @@ jobs:
   build:
     runs-on: ubuntu-latest
     
+    # Esto es clave: definimos los servicios que necesitamos
+    services:
+      db:
+        image: postgres:15
+        env:
+          POSTGRES_DB: tu_base_de_datos
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: Mami_pro42
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@v4
 
-      # 1. Este paso inicializa el Docker en la máquina de GitHub
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      # 2. Intentamos correrlo con 'docker compose' (versión moderna)
-      # Si falla, el archivo .yml se detendrá y te avisará.
-      - name: Run Tests with Docker
+      - name: Run Tests
+        env:
+          # Estas variables deben coincidir con las que usa tu settings.py
+          DATABASE_URL: postgres://user:Mami_pro42@localhost:5432/mi_base_de_datos
         run: |
-          docker compose build
+          # Si usas docker-compose, asegúrate que las variables de entorno 
+          # en tu CI coincidan con las del docker-compose.yml
+          docker compose up -d db
+          # Esperar a que la BD esté lista
+          sleep 10
           docker compose run web python manage.py test
