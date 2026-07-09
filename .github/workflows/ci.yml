@@ -25,14 +25,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Run Tests
-        env:
-          # Estas variables deben coincidir con las que usa tu settings.py
-          DATABASE_URL: postgres://user:Mami_pro42@localhost:5432/mi_base_de_datos
+      - name: Stop GitHub's default Postgres
+        run: sudo systemctl stop postgresql
+      
+      - name:
         run: |
-          # Si usas docker-compose, asegúrate que las variables de entorno 
-          # en tu CI coincidan con las del docker-compose.yml
-          docker compose up -d db
-          # Esperar a que la BD esté lista
-          sleep 10
-          docker compose run web python manage.py test
+          docker compose upd -d
+          sleep 30
+          docker compose exec -T web python manage.py migrate
+          docker compose exec -T web python manage.py test
