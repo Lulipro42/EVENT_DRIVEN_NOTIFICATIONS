@@ -1,13 +1,20 @@
 name: Django CI
 
-on: [push]
+on: [push, pull_request]
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
+    
     steps:
-    - uses: actions/checkout@v3
-    - name: Build and Run Tests with Docker
-      run: |
-        docker-compose build
-        docker-compose run web python manage.py test
+      - uses: actions/checkout@v4
+
+      # 1. Este paso configura Docker automáticamente en la máquina de GitHub
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # 2. Ahora sí, podés usar docker-compose
+      - name: Run Tests with Docker
+        run: |
+          docker-compose build
+          docker-compose run web python manage.py test
