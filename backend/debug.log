@@ -49,3 +49,5 @@ AssertionError: Expected a `Response`, `HttpResponse` or `StreamingHttpResponse`
 2026-07-08 23:37:08,430 [WARNING] log (PID 72452): Too Many Requests: /api/clientes/regiistro/
 2026-07-08 23:38:54,349 [WARNING] log (PID 73570): Too Many Requests: /api/clientes/regiistro/
 2026-07-08 23:38:54,507 [WARNING] log (PID 73570): Bad Request: /api/clientes/regiistro/
+2026-07-09 19:50:18,938 [WARNING] log (PID 9): Too Many Requests: /api/clientes/regiistro/
+2026-07-09 19:50:19,125 [WARNING] log (PID 9): Bad Request: /api/clientes/regiistro/

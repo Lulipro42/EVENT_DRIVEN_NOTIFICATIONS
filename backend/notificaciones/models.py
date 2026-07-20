@@ -13,6 +13,7 @@ class Cliente(models.Model):
         # Permite que quede vacío en la base de datos
         # Permite que quede vacío en los formularios
         
-
+    email_bienvenida_enviado = models.BooleanField(default=False)
+    
     def __str__(self) -> str:
         return self.email if self.email else "Sin email"

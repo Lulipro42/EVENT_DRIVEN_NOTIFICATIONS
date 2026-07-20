@@ -8,28 +8,11 @@ from unittest.mock import patch
 from .models import Cliente
 from django.db import connection
 from django.core.cache import cache  
+from notificaciones.tasks import enviar_email_tarea
 # Create your tests here.
 User = get_user_model()
 
-class ClienteTests(APITestCase):
-    """
-    Suite de pruebas unitarias robusta para la creación de clientes.
-    Garantiza aislamiento en CI/CD y validación de seguridad perimetral.
-    """
 
-    @classmethod
-    def setUpTestData(cls):
-        """Optimización de rendimiento para CI/CD: Carga datos en memoria una sola vez."""
-        cls.url_registro = reverse('registro_usuario')
-        
-        # 🚨 LÍNEA DE ESPIONAJE: Vamos a ver qué imprime la consola acá
-        print(f"\n[DEBUG PORTFOLIO] La URL resuelta por el test es: {cls.url_registro}\n")
-        
-        cls.datos_validos = {
-            
-            "email": "dev@portfolio.com",
-            "password": "SecurePassword123!"
-        }
 
 class ClienteTests(APITestCase):
     
@@ -92,3 +75,27 @@ class ClienteTests(APITestCase):
                 self.assertEqual(response.status_code, status.HTTP_201_CREATED)
             else:
                 self.assertEqual(response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+                
+
+class IdempotenciaEmailTestCase(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="cliente_test", password="cliente123")
+        self.cliente = Cliente.objects.create(user=self.user, email="idempotencia@gmail.com")
+        
+    @patch('notificaciones.tasks.send_mail')  # 👈 mockeamos send_mail en vez de time.sleep
+    def test_tarea_no_reenvia_email_si_ya_fue_enviado(self, mock_send_mail):
+        """Verifica que ejecutar la tarea dos veces no repita el envío del email"""
+    
+        self.assertFalse(self.cliente.email_bienvenida_enviado)
+    
+        resultado_1 = enviar_email_tarea(self.cliente.id)
+        self.assertEqual(resultado_1, "Éxito")
+    
+        self.cliente.refresh_from_db()
+        self.assertTrue(self.cliente.email_bienvenida_enviado)
+    
+        resultado_2 = enviar_email_tarea(self.cliente.id)
+        self.assertEqual(resultado_2, "Ya estaba enviado")
+    
+        # Confirmamos que send_mail solo se llamó UNA vez, no dos
+        mock_send_mail.assert_called_once()
