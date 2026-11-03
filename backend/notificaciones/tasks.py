@@ -18,14 +18,19 @@ def enviar_email_tarea(self, cliente_id):
     try:
         with transaction.atomic():
             cliente = Cliente.objects.select_for_update().get(id=cliente_id)
-            
+
             if cliente.estado_email_bienvenida == EstadoEmail.ENVIADO:
                 print(f"--- Email ya enviado previamente para cliente {cliente_id} ---")
+                return "Ya estaba enviado"
+                
+            if cliente.estado_email_bienvenida == EstadoEmail.EN_PROCESO:
+                print(f"--- Email ya está siendo procesado para cliente {cliente_id} ---")
                 return "Ya estaba enviado"
 
             cliente.estado_email_bienvenida = EstadoEmail.EN_PROCESO
             cliente.save(update_fields=['estado_email_bienvenida'])
             email_destino = cliente.email
+            
     except ObjectDoesNotExist:
         print(f"--- El cliente con ID {cliente_id} no existe ---")
         raise
