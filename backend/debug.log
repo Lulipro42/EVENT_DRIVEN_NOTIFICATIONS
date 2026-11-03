@@ -201,3 +201,5 @@ NameError: name 'procesar_registro_exitoso' is not defined
 2026-11-03 20:58:01,480 [WARNING] log (PID 125): Bad Request: /api/clientes/regiistro/
 2026-11-03 21:00:50,877 [WARNING] log (PID 137): Too Many Requests: /api/clientes/regiistro/
 2026-11-03 21:00:57,953 [WARNING] log (PID 137): Bad Request: /api/clientes/regiistro/
+2026-11-03 23:02:19,806 [WARNING] log (PID 42): Too Many Requests: /api/clientes/regiistro/
+2026-11-03 23:02:28,559 [WARNING] log (PID 42): Bad Request: /api/clientes/regiistro/

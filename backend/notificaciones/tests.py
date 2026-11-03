@@ -45,8 +45,9 @@ class ClienteTests(TransactionTestCase):
         response = self.client.post(self.url_registro, data=payload_corrupto, format='json')
         
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        
-    def test_limite_de_peticiones_registro_throttling(self):
+    
+    @patch('notificaciones.views.enviar_email_tarea.delay')
+    def test_limite_de_peticiones_registro_throttling(self, mock_celery_task):
         """Prueba de estrés: Verifica el bloqueo del middleware ante ráfagas de peticiones (429)."""
         limite_maximo = 5
         
@@ -58,9 +59,17 @@ class ClienteTests(TransactionTestCase):
             response = self.client.post(self.url_registro, data=datos_dinamicos, format='json')
             
             if i < limite_maximo:
-                self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+                self.assertEqual(
+                    response.status_code, 
+                    status.HTTP_201_CREATED, 
+                    f"Falló en la petición {i+1}, se esperaba 201 y llegó {response.status_code}"
+                )
             else:
-                self.assertEqual(response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+                self.assertEqual(
+                    response.status_code, 
+                    status.HTTP_429_TOO_MANY_REQUESTS, 
+                    "Se esperaba bloqueo por throttling (429) y la petición pasó"
+                )
                 
 
 class IdempotenciaEmailTestCase(APITestCase):

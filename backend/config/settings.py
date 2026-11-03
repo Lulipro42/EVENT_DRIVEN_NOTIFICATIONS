@@ -1,7 +1,8 @@
 from pathlib import Path
 from datetime import timedelta
 import os
-from django.core.exceptions import ImproperlyConfigured
+import sys
+
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -13,7 +14,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'notificaciones',
-    'rest_framework',                  
+    'rest_framework',               
     'rest_framework_simplejwt', 
 ]
 
@@ -43,16 +44,9 @@ TEMPLATES = [
         },
     },
 ]
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-default-key-change-me')
 
-def get_env_variable(var_name):
-    try:
-        return os.environ[var_name]
-    except KeyError:
-        raise ImproperlyConfigured(f"La variable de entorno '{var_name}' es obligatoria.")
-
-SECRET_KEY = get_env_variable('SECRET_KEY')
-
-DEBUG = os.getenv('DEBUG', 'False') == 'True'
+DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1,0.0.0.0').split(',')
 
@@ -64,8 +58,110 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': os.environ.get('DB_NAME', 'mi_base_de_datos'),
         'USER': os.environ.get('DB_USER', 'user'),
-        'PASSWORD': get_env_variable('DB_PASSWORD'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', 'Mami_pro42'),
         'HOST': os.environ.get('DB_HOST', 'db'),
         'PORT': os.environ.get('DB_PORT', '5432'),
     }
 }
+
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
+]
+
+LANGUAGE_CODE = 'en-us'
+
+TIME_ZONE = 'UTC'
+
+USE_I18N = True
+
+USE_TZ = True
+
+STATIC_URL = 'static/'
+
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+# --- Configuración de Celery ---
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://redis:6379/0')
+CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'redis://redis:6379/0')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'
+CELERY_TASK_ACKS_LATE = True
+CELERY_TASK_REJECT_ON_WORKER_LOST = True
+
+# Si estamos corriendo los tests, forzamos el modo eager para evitar buscar a Redis externo
+if 'test' in sys.argv or 'pytest' in sys.argv:
+    CELERY_TASK_ALWAYS_EAGER = True
+    CELERY_TASK_EAGER_PROPAGATES = True
+
+
+REST_FRAMEWORK = {
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',  
+        'rest_framework.throttling.UserRateThrottle', 
+    ],
+    
+    
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '5/minute',  
+        'user': '10/minute',
+    },
+    'EXCEPTION_HANDLER': 'notificaciones.utils.exceptions.custom_exception',
+}
+
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5), 
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+}
+
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+
+# ==============================================================================
+# CONFIGURACIÓN DE LOGGING (SISTEMA DE BITÁCORA)
+# ==============================================================================
+
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    
+    'formatters':{
+        'verbose':{
+            'format': '{asctime} [{levelname}] {module} (PID {process:d}): {message}',
+            'style': '{'
+        },
+    },
+    
+    'handlers':{
+        'file':{
+            'level': 'WARNING',  
+            'class': 'logging.FileHandler',
+            
+            'filename': os.path.join(BASE_DIR, 'debug.log'),
+            'formatter': 'verbose',
+        },
+    },
+
+    'root': {
+        'handlers': ['file'],
+        'level': 'WARNING',
+    
+    },
+}
+
+DEFAULT_FROM_EMAIL = 'notificaciones@tu-fintech.com'
