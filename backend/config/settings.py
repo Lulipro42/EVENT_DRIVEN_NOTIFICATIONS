@@ -44,7 +44,6 @@ TEMPLATES = [
     },
 ]
 
-# Función auxiliar para asegurar que las variables críticas existan obligatoriamente
 def get_env_variable(var_name):
     try:
         return os.environ[var_name]
