@@ -12,6 +12,15 @@ jobs:
       - name: Stop GitHub's default Postgres
         run: sudo systemctl stop postgresql
 
+      - name: Create .env file
+        run: |
+          echo "DB_NAME=mi_base_de_datos" >> .env
+          echo "DB_USER=user" >> .env
+          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+          echo "DB_HOST=db" >> .env
+          echo "DB_PORT=5432" >> .env
+          echo "DJANGO_SECRET_KEY=${{ secrets.DJANGO_SECRET_KEY }}" >> .env
+
       - name: Build and Run Services
         run: |
           docker compose build
