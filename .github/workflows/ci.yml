@@ -16,6 +16,7 @@ jobs:
         run: |
           echo "DB_NAME=mi_base_de_datos" >> .env
           echo "DB_USER=user" >> .env
+          echo "DEBUG=False" >> .env
           echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
           echo "DB_HOST=db" >> .env
           echo "DB_PORT=5432" >> .env

@@ -10,7 +10,7 @@ class EstadoEmail(models.TextChoices):
     FALLIDO = 'FALLIDO', 'Fallido'
 
 class Cliente(models.Model):
-    user = models.OneToOneField(User, on_delete=models.SET_NULL,null=True, related_name='cliente')
+    user = models.OneToOneField(User, on_delete=models.SET_NULL, null=True, related_name='cliente')
     email = models.EmailField(unique=True, null=True, blank=True)
     estado_email_bienvenida = models.CharField(
         max_length=20,

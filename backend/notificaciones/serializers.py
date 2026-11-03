@@ -5,8 +5,8 @@ from .models import Cliente
 from rest_framework_simplejwt.tokens import RefreshToken
 
 class ClienteSerializer(serializers.ModelSerializer):
-    # SENIOR TIP: Declaramos 'password' explícitamente porque NO pertenece al modelo Cliente.
-    # Usamos 'write_only' para que jamás se exponga en las respuestas JSON de la API.
+    user = serializers.PrimaryKeyRelatedField(read_only=True)
+
     password = serializers.CharField(
         write_only=True,
         required=True,
@@ -18,11 +18,8 @@ class ClienteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Cliente
-        # Quitamos 'user' de los campos requeridos en el JSON de entrada, 
-        # ya que la API lo creará internamente de forma automática.
         fields = ['user', 'email', 'password']
         
-        # Mantenemos tus validaciones limpias para el email
         extra_kwargs = {
             'email': {
                 'required': True,
@@ -51,17 +48,13 @@ class ClienteSerializer(serializers.ModelSerializer):
         email = validated_data.get('email')
         password = validated_data.pop('password') # Extraemos la contraseña para que no ensucie al Cliente
 
-        # SENIOR TIP: Usamos una transacción atómica. Si la creación del Cliente falla, 
-        # el Usuario de Django tampoco se guarda en la base de datos (evita datos basura).
         with transaction.atomic():
-            # 1. Creamos el usuario base de Django (aquí se encripta la contraseña automáticamente)
             user = User.objects.create_user(
-                username=email,  # Usamos el email como username del sistema
+                username=email, 
                 email=email,
                 password=password
             )
             
-            # 2. Creamos el perfil del cliente vinculándolo al usuario recién creado
             cliente = Cliente.objects.create(
                 user=user,
                 **validated_data
@@ -69,18 +62,12 @@ class ClienteSerializer(serializers.ModelSerializer):
             
         return cliente
 
-
     def to_representation(self, instance):
         """
         Transforma la instancia guardada (el cliente) en el JSON de respuesta final.
         """
-        # Obtenemos la representación estándar del objeto
         ret = super().to_representation(instance)
-        
-        # 2. Generamos los tokens basándonos en el usuario (instance.user)
         refresh = RefreshToken.for_user(instance.user)
-        
-        # 3. Inyectamos los tokens en el diccionario de respuesta
         ret['access'] = str(refresh.access_token)
         ret['refresh'] = str(refresh)
         
