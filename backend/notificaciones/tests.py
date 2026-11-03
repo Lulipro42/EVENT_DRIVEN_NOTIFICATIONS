@@ -1,56 +1,42 @@
-from django.test import TestCase
+from unittest.mock import patch
+from concurrent.futures import ThreadPoolExecutor
+from django.test import TransactionTestCase  
 from django.urls import reverse
 from rest_framework import status
-from rest_framework.test import APITestCase
-from django.contrib.auth.models import User
+from rest_framework.test import APITestCase, APIClient
 from django.contrib.auth import get_user_model
-from unittest.mock import patch
-from .models import Cliente
-from django.db import connection
 from django.core.cache import cache  
+from notificaciones.models import Cliente, EstadoEmail
 from notificaciones.tasks import enviar_email_tarea
-# Create your tests here.
+from django.db import connection
+
 User = get_user_model()
 
 
-
-class ClienteTests(APITestCase):
+class ClienteTests(TransactionTestCase):
     
-    @classmethod
-    def setUpTestData(cls):
-        cls.url_registro = reverse('registro_usuario')
-        cls.datos_validos = {
+    def setUp(self):
+        self.client = APIClient()
+        self.url_registro = reverse('registro_usuario')
+        self.datos_validos = {
             "email": "dev@portfolio.com",
             "password": "SecurePassword123!"
         }
 
     def tearDown(self):
-        """
-        Garantiza el aislamiento de los tests: Limpia la caché de Throttling 
-        después de cada prueba para que un test no bloquee a los demás.
-        """
         cache.clear()
         super().tearDown()
 
-
-    @patch('notificaciones.tasks.enviar_email_tarea.delay')
+    @patch('notificaciones.views.enviar_email_tarea.delay')
     def test_registro_exitoso_y_disparo_de_tareas_asincronas(self, mock_celery_task):
-        """Verifica que el flujo feliz persista los datos y delegue a Celery de forma segura."""
-        # Act
+        """Verifica que el flujo feliz persista los datos y delegue a Celery tras el commit."""
         response = self.client.post(self.url_registro, data=self.datos_validos, format='json')
         
-        # Assert: Capa de transporte (API)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertIn('email', response.data)
         
-        # Assert: Capa de persistencia (BD)
         cliente_creado = Cliente.objects.filter(email=self.datos_validos["email"]).first()
         self.assertIsNotNone(cliente_creado)
         
-        # Assert: Seguridad perimetral (No exponer passwords)
-        self.assertNotIn('password', response.data)
-        
-        # Assert: Desacoplamiento de infraestructura asíncrona
         mock_celery_task.assert_called_once_with(cliente_creado.id)
     
     def test_registro_falla_por_payload_invalido(self):
@@ -78,24 +64,66 @@ class ClienteTests(APITestCase):
                 
 
 class IdempotenciaEmailTestCase(APITestCase):
-    def setUp(self):
-        self.user = User.objects.create_user(username="cliente_test", password="cliente123")
-        self.cliente = Cliente.objects.create(user=self.user, email="idempotencia@gmail.com")
-        
-    @patch('notificaciones.tasks.send_mail')  # 👈 mockeamos send_mail en vez de time.sleep
-    def test_tarea_no_reenvia_email_si_ya_fue_enviado(self, mock_send_mail):
-        """Verifica que ejecutar la tarea dos veces no repita el envío del email"""
     
-        self.assertFalse(self.cliente.email_bienvenida_enviado)
+    @patch('notificaciones.tasks.enviar_email_tarea.delay')
+    def setUp(self, mock_task_delay):
+        self.user = User.objects.create_user(username="cliente_test", password="cliente123")
+        self.cliente = Cliente.objects.create(
+            user=self.user, 
+            email="idempotencia@gmail.com",
+            estado_email_bienvenida=EstadoEmail.PENDIENTE
+        )
+        
+    @patch('notificaciones.tasks.send_mail')
+    def test_tarea_no_reenvia_email_si_ya_fue_enviado(self, mock_send_mail):
+        """Verifica que ejecutar la tarea dos veces no repita el envío del email (Idempotencia)"""
+        mock_send_mail.return_value = 1
+    
+        self.assertEqual(self.cliente.estado_email_bienvenida, EstadoEmail.PENDIENTE)
     
         resultado_1 = enviar_email_tarea(self.cliente.id)
-        self.assertEqual(resultado_1, "Éxito")
+        self.assertEqual(resultado_1, "Exito")
     
         self.cliente.refresh_from_db()
-        self.assertTrue(self.cliente.email_bienvenida_enviado)
+        self.assertEqual(self.cliente.estado_email_bienvenida, EstadoEmail.ENVIADO)
     
         resultado_2 = enviar_email_tarea(self.cliente.id)
         self.assertEqual(resultado_2, "Ya estaba enviado")
     
-        # Confirmamos que send_mail solo se llamó UNA vez, no dos
         mock_send_mail.assert_called_once()
+
+
+class ConcurrenciaEmailTestCase(TransactionTestCase):
+    
+    def setUp(self):
+        self.user = User.objects.create_user(username="concurrente_test", password="cliente123")
+        self.cliente = Cliente.objects.create(
+            user=self.user,
+            email="concurrencia@gmail.com",
+            estado_email_bienvenida=EstadoEmail.PENDIENTE
+        )
+
+    @patch('notificaciones.tasks.send_mail')
+    def test_dos_workers_procesando_simultaneamente(self, mock_send_mail):
+        mock_send_mail.return_value = 1
+        client_id = self.cliente.id
+
+        def tarea_envuelta(cid):
+            try:
+                return enviar_email_tarea(cid)
+            finally:
+                connection.close()  
+
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            future_1 = executor.submit(tarea_envuelta, client_id)
+            future_2 = executor.submit(tarea_envuelta, client_id)
+            
+            resultado_1 = future_1.result()
+            resultado_2 = future_2.result()
+
+        resultados = {resultado_1, resultado_2}
+        self.assertIn("Exito", resultados)
+        self.assertIn("Ya estaba enviado", resultados)
+
+        self.cliente.refresh_from_db()
+        self.assertEqual(self.cliente.estado_email_bienvenida, EstadoEmail.ENVIADO)

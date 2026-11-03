@@ -2,6 +2,9 @@
 venv/
 env/
 .venv/
+backend/venv/
+backend/env/
+backend/.venv/
 
 # Python / Django
 __pycache__/
@@ -9,6 +12,12 @@ __pycache__/
 db.sqlite3
 media/
 static/
+
+# Entorno y Secretos (CRÍTICO)
+.env
+
+# Logs
+*.log
 
 # Docker
 .docker/

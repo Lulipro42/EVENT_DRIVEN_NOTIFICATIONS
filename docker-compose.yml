@@ -2,9 +2,9 @@ services:
   db:
     image: postgres:15-alpine
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: Mami_pro42
-      POSTGRES_DB: mi_base_de_datos
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
@@ -21,6 +21,8 @@ services:
       - .:/app
     ports:
       - "8000:8000"
+    env_file:
+      - .env 
     environment:
       - DJANGO_SETTINGS_MODULE=config.settings
       - PYTHONPATH=/app:/app/backend
@@ -34,6 +36,8 @@ services:
     command: celery -A config worker --loglevel=info
     volumes:
       - .:/app
+    env_file:
+      - .env  
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - DJANGO_SETTINGS_MODULE=config.settings
@@ -48,6 +52,8 @@ services:
     command: celery -A config flower --port=5555
     ports:
       - "5555:5555"
+    env_file:
+      - .env  
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - DJANGO_SETTINGS_MODULE=config.settings

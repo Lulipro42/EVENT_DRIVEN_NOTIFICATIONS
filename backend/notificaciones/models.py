@@ -2,18 +2,21 @@ import random
 from django.db import models
 from django.contrib.auth.models import User
 from decimal import Decimal
-# Create your models here.
+
+class EstadoEmail(models.TextChoices):
+    PENDIENTE = 'PENDIENTE', 'Pendiente'
+    EN_PROCESO = 'EN_PROCESO', 'En Proceso'
+    ENVIADO = 'ENVIADO', 'Enviado'
+    FALLIDO = 'FALLIDO', 'Fallido'
 
 class Cliente(models.Model):
-
-    user = models.OneToOneField(User, on_delete=models.SET_NULL,null=True, related_name='cliente') # Bueno aca basandome en demas codigos puse el user ya que luego voy a crear una variable user/cliente, luego puse ontefield debido a la seguridad, para que nadie mas pueda acceder a su usario, leugo el set null para tambien tema de seguiradad 
-    
+    user = models.OneToOneField(User, on_delete=models.SET_NULL,null=True, related_name='cliente')
     email = models.EmailField(unique=True, null=True, blank=True)
-        # Seguridad: Nadie más puede usar este correo
-        # Permite que quede vacío en la base de datos
-        # Permite que quede vacío en los formularios
-        
-    email_bienvenida_enviado = models.BooleanField(default=False)
+    estado_email_bienvenida = models.CharField(
+        max_length=20,
+        choices=EstadoEmail.choices,
+        default=EstadoEmail.PENDIENTE
+    )
     
     def __str__(self) -> str:
         return self.email if self.email else "Sin email"
