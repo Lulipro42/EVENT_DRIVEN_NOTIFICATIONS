@@ -20,7 +20,7 @@ jobs:
           echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
           echo "DB_HOST=db" >> .env
           echo "DB_PORT=5432" >> .env
-          echo "DJANGO_SECRET_KEY=${{ secrets.DJANGO_SECRET_KEY }}" >> .env
+          echo "SECRET_KEY=${{ secrets.DJANGO_SECRET_KEY }}" >> .env
 
       - name: Build and Run Services
         run: docker compose up -d --build
@@ -32,4 +32,4 @@ jobs:
         run: docker compose exec -T web python manage.py migrate
 
       - name: Run Tests
-        run: docker compose exec -T web python manage.py tes
+        run: docker compose exec -T web python manage.py test
