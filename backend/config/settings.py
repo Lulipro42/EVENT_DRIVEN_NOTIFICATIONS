@@ -44,21 +44,18 @@ TEMPLATES = [
         },
     },
 ]
-SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-default-key-change-me')
-
-DEBUG = os.getenv('DEBUG', 'True') == 'True'
-
+SECRET_KEY = os.environ['SECRET_KEY']
+DEBUG = os.getenv('DEBUG', 'False') == 'True'
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1,0.0.0.0').split(',')
-
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('DB_NAME', 'mi_base_de_datos'),
-        'USER': os.environ.get('DB_USER', 'user'),
-        'PASSWORD': os.environ.get('DB_PASSWORD', 'Mami_pro42'),
+        'NAME': os.environ['DB_NAME'],
+        'USER': os.environ['DB_USER'],
+        'PASSWORD': os.environ['DB_PASSWORD'],
         'HOST': os.environ.get('DB_HOST', 'db'),
         'PORT': os.environ.get('DB_PORT', '5432'),
     }

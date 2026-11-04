@@ -17,6 +17,7 @@ class Cliente(models.Model):
         choices=EstadoEmail.choices,
         default=EstadoEmail.PENDIENTE
     )
+    intentado_en = models.DateTimeField(null=True, blank=True)
     
     def __str__(self) -> str:
         return self.email if self.email else "Sin email"

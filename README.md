@@ -1,83 +1,151 @@
-# 🚀 API REST: Registro de Clientes (Event-Driven)
+# Event-Driven Notifications
 
-Este proyecto es una API profesional desarrollada en Django REST Framework, diseñada bajo una arquitectura de microservicios asíncronos para garantizar alta disponibilidad, seguridad y escalabilidad.
+**API REST para la gestión de clientes y el procesamiento asíncrono de notificaciones por correo electrónico.**
 
-## 💎 Características Clave
+Event-Driven Notifications es un proyecto backend desarrollado con Django REST Framework que implementa el procesamiento asíncrono de notificaciones utilizando Celery y Redis.
 
-* 🏗️ **Arquitectura de Capas:** Separación total de responsabilidades (Views -> Services -> Serializers).
-* ⚡ **Asincronía Total:** Procesamiento de notificaciones mediante Celery + Redis, garantizando que el usuario no espere por correos.
-* 🛡️ **Seguridad Financiera/Datos:** Implementación de `transaction.atomic()` para asegurar la integridad absoluta en la base de datos.
-* 🔐 **Autenticación Robusta:** Integración con JWT (SimpleJWT) para sesiones seguras.
-* 🚧 **Control de Tráfico:** Protección mediante Throttling (5 peticiones/minuto para evitar spam).
-* 🔭 **Observabilidad:** Dashboard con Flower para monitorear tareas en tiempo real.
-* 🔁 **Resiliencia ante fallos:** Tareas configuradas con `acks_late` y reintentos con backoff exponencial, para que ninguna notificación se pierda si un worker cae a mitad de proceso.
-* 🎯 **Idempotencia:** Cada tarea verifica su propio estado antes de ejecutarse, evitando el envío duplicado de notificaciones aunque Celery reintente la operación.
+El objetivo principal es desacoplar el registro de clientes del envío de correos electrónicos, evitando que una operación de la API tenga que esperar a que finalice una tarea externa.
 
-## 🛠️ Tecnologías Utilizadas
+> **Estado del proyecto:** MVP desarrollado como proyecto de portfolio para explorar procesamiento asíncrono, transacciones, reintentos, manejo de errores e idempotencia en aplicaciones backend.
 
-- **Backend:** Python 3.11 & Django 5.x
-- **API Toolkit:** Django REST Framework (DRF)
-- **Asincronía:** Celery & Redis
-- **Base de Datos:** PostgreSQL
-- **Infraestructura:** Docker & Docker Compose
-- **Monitoreo:** Flower
+## Características principales
 
-## 📦 Instalación y Configuración (Docker)
+- **API REST:** gestión y registro de clientes mediante Django REST Framework.
+- **Autenticación JWT:** autenticación basada en tokens utilizando SimpleJWT.
+- **Procesamiento asíncrono:** delegación del envío de notificaciones a workers de Celery.
+- **Redis:** utilizado como broker de mensajes para Celery.
+- **Transacciones de base de datos:** uso de `transaction.atomic()` y `transaction.on_commit()` para coordinar las operaciones de persistencia con la publicación de tareas.
+- **Reintentos:** manejo de determinados errores transitorios mediante la configuración de reintentos de Celery.
+- **Control de estado:** seguimiento del estado de las notificaciones durante su procesamiento.
+- **Control de tareas:** integración de Flower para visualizar la actividad de los workers y las tareas.
+- **Docker Compose:** entorno local con los servicios necesarios para ejecutar la aplicación.
 
-Para levantar este proyecto, asegurate de tener instalado Docker Desktop.
+## Arquitectura
 
-1. **Clonar el repositorio:**
+El proyecto utiliza una arquitectura monolítica modular basada en Django, complementada con procesamiento asíncrono mediante Celery.
 
-   ```bash
-   git clone https://github.com/Lulipro42/EVENT_DRIVEN_NOTIFICATIONS.git
-   cd EVENT_DRIVEN_NOTIFICATIONS
-   ```
+La API, la lógica de aplicación y los modelos pertenecen al mismo proyecto Django. El worker de Celery se ejecuta como un proceso independiente y consume tareas publicadas mediante Redis.
 
-2. **Levantar el ecosistema:**
+```mermaid
+flowchart TD
+    Client[Cliente HTTP] --> API[Django REST Framework]
 
-   ```bash
-   docker-compose up --build
-   ```
+    API --> DB[(PostgreSQL)]
+    API -->|Después del commit| Redis[(Redis Broker)]
 
-3. **Monitoreo en tiempo real:**
+    Redis --> Worker[Celery Worker]
+    Worker --> DB
+    Worker --> Email[Backend de correo]
 
-   Accedé a `http://localhost:5555` para ver el estado de tus tareas en Flower.
-
-## 🧪 Testing Profesional
-
-Ejecutá el siguiente comando para validar que tu lógica sigue siendo infalible:
-
-```bash
-docker-compose exec web python manage.py test
+    Flower[Flower] -. Monitoreo .-> Worker
 ```
 
-## 🔧 Decisiones técnicas de resiliencia (Celery)
+Para conocer las responsabilidades de cada componente y los flujos de ejecución, consultá [ARCHITECTURE.md](ARCHITECTURE.md).
 
-Estas son las configuraciones puntuales que hacen que el sistema de notificaciones sea confiable en escenarios reales, no solo en el camino feliz:
+## Tecnologías
 
-### `acks_late` + `task_reject_on_worker_lost`
+| Tecnología | Responsabilidad |
+|---|---|
+| Python | Lenguaje principal |
+| Django | Framework backend |
+| Django REST Framework | Construcción de la API REST |
+| PostgreSQL | Persistencia de datos |
+| Celery | Ejecución de tareas asíncronas |
+| Redis | Broker de mensajes |
+| SimpleJWT | Autenticación mediante JWT |
+| Flower | Monitoreo de tareas Celery |
+| Docker Compose | Entorno de desarrollo |
 
-Por defecto, Celery marca una tarea como "completada" en el broker (Redis) apenas el worker la toma, no cuando termina de ejecutarla. Esto significa que si el worker muere a mitad de camino (crash, reinicio, `kill -9`), la tarea se pierde silenciosamente — el email nunca se manda y nadie se entera.
+## Flujo general de una notificación
 
-Con `CELERY_TASK_ACKS_LATE = True`, la tarea solo se confirma como completada **después** de ejecutarse con éxito. Si el worker muere antes de eso, la tarea vuelve a la cola y otro worker la retoma. `CELERY_TASK_REJECT_ON_WORKER_LOST = True` refuerza esto: si Celery detecta que el worker murió, rechaza explícitamente la tarea para que vuelva a la cola en vez de quedar en un estado ambiguo.
+1. El cliente realiza una solicitud a la API para registrar un cliente.
+2. Django valida los datos y persiste el registro.
+3. Una vez confirmada la transacción, se publica la tarea asíncrona.
+4. Redis actúa como broker y permite que un worker de Celery reciba la tarea.
+5. El worker ejecuta la lógica de envío de la notificación.
+6. Se actualiza el estado correspondiente según el resultado del procesamiento.
 
-### Idempotencia en `enviar_email_tarea`
+Este enfoque evita ejecutar el envío de correo directamente dentro del ciclo de vida de la solicitud HTTP.
 
-`acks_late` protege contra **perder** una tarea, pero no contra **duplicarla**: si el worker manda el email y muere justo antes de confirmarlo a Redis, la tarea se reintenta y el email se manda dos veces.
+## Manejo de errores y confiabilidad
 
-Para evitar esto, el modelo `Cliente` tiene un campo `email_bienvenida_enviado` (booleano). Antes de ejecutar el envío, la tarea chequea ese campo — si ya está en `True`, corta ahí mismo sin repetir la operación. Recién después de un envío exitoso, lo marca en `True` y guarda. Esto hace que la tarea sea segura de ejecutar más de una vez con el mismo resultado.
+El proyecto explora distintos mecanismos para mejorar el procesamiento de tareas asíncronas:
 
-### Retry con backoff exponencial
+- Confirmación tardía de tareas mediante `acks_late`.
+- Rechazo de tareas cuando se detecta la pérdida de un worker, mediante `task_reject_on_worker_lost`.
+- Reintentos ante determinados errores transitorios.
+- Backoff exponencial para evitar reintentos demasiado frecuentes.
+- Verificación del estado de una notificación antes de intentar procesarla nuevamente.
 
-Las excepciones transitorias de red (`ConnectionError`, `TimeoutError`, `OSError`) disparan reintentos automáticos, con un intervalo que crece exponencialmente entre intentos (hasta un máximo de 600 segundos). Esto evita que, ante una falla temporal del servicio de email, el sistema martille reintentos inmediatos sin dar tiempo a que el problema se resuelva. Errores de programación (`TypeError`, `AttributeError`, etc.) quedan fuera de este mecanismo a propósito, para que fallen de inmediato y sean visibles en los logs, en vez de ocultarse detrás de reintentos.
+Estos mecanismos ayudan a gestionar fallos, pero no constituyen por sí solos una garantía de entrega exactamente una vez.
 
-## 💡 Lecciones Aprendidas (El valor del Ingeniero)
+La idempotencia y la recuperación de tareas interrumpidas requieren controles adicionales, especialmente cuando un worker falla después de ejecutar una operación externa pero antes de actualizar su estado.
 
-- **Desacoplamiento:** Cómo delegar tareas pesadas a un worker para mejorar la experiencia de usuario (UX).
-- **Atomicidad:** La importancia de proteger la BD contra estados inconsistentes.
-- **Resiliencia:** La diferencia entre una tarea que "funciona" en el camino feliz y una que sobrevive a fallos reales de infraestructura (workers que mueren, reintentos, duplicados).
-- **Observabilidad:** La diferencia entre "código que corre" y "código que puedo monitorear".
+## Instalación y ejecución
 
----
+### Requisitos
 
-Desarrollado con arquitectura orientada a eventos para el máximo rendimiento.
+- Docker
+- Docker Compose
+- Git
+
+### Clonar el repositorio
+
+```bash
+git clone https://github.com/Lulipro42/EVENT_DRIVEN_NOTIFICATIONS.git
+
+cd EVENT_DRIVEN_NOTIFICATIONS
+```
+
+### Configurar variables de entorno
+
+Crear el archivo `.env` a partir de `.env.example`:
+
+```bash
+cp .env.example .env
+```
+
+Configurar las variables necesarias para la aplicación y los servicios.
+
+### Iniciar los servicios
+
+```bash
+docker compose up --build
+```
+
+### Servicios disponibles
+
+| Servicio | Dirección |
+|---|---|
+| API | http://localhost:8000 |
+| Flower | http://localhost:5555 |
+
+### Ejecutar tests
+
+```bash
+docker compose exec web python manage.py test
+```
+
+## Consideraciones y limitaciones actuales
+
+Este proyecto es un MVP y no se presenta como una plataforma de notificaciones lista para producción.
+
+Algunas consideraciones importantes:
+
+- El envío de correos utiliza actualmente `console.EmailBackend` en el entorno revisado, por lo que los mensajes se muestran en la consola en lugar de enviarse mediante un proveedor SMTP externo.
+- El estado de procesamiento debe contemplar la recuperación de notificaciones que queden en `EN_PROCESO` después de una interrupción del worker.
+- La prevención de duplicados mediante un estado persistido no garantiza por sí sola la entrega exactamente una vez ante fallos entre el envío externo y la actualización de la base de datos.
+- La configuración de desarrollo con Django `runserver` no representa una configuración de despliegue de producción.
+
+## Posibles mejoras
+
+- Implementar recuperación automática de notificaciones abandonadas.
+- Fortalecer la idempotencia frente a fallos durante operaciones externas.
+- Incorporar un proveedor real de correo electrónico.
+- Mejorar la observabilidad y el seguimiento de fallos.
+- Incorporar pruebas de concurrencia y escenarios de recuperación.
+- Preparar una configuración específica para producción.
+
+## Objetivo del proyecto
+
+Este proyecto busca demostrar conocimientos prácticos de backend engineering mediante el diseño de una API REST que integra persistencia relacional y procesamiento asíncrono, prestando especial atención a las transacciones, los reintentos, los estados de procesamiento y el manejo de fallos.

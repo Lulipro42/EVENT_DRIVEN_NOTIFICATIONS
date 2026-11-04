@@ -1,4 +1,6 @@
 import smtplib
+from datetime import timedelta  # <--- Asegúrate de importar esto arriba
+from django.utils import timezone  # <--- Y esto para manejar fechas con zona horaria
 from celery import shared_task
 from django.db import transaction
 from django.core.mail import send_mail
@@ -24,11 +26,19 @@ def enviar_email_tarea(self, cliente_id):
                 return "Ya estaba enviado"
                 
             if cliente.estado_email_bienvenida == EstadoEmail.EN_PROCESO:
-                print(f"--- Email ya está siendo procesado para cliente {cliente_id} ---")
-                return "Ya estaba enviado"
+                tiempo_limite = timezone.now() - timedelta(minutes=10)  
+                
+                if cliente.intentado_en and cliente.intentado_en < tiempo_limite:
+                    print(f"--- [RECOVER] Cliente {cliente_id} abandonado en EN_PROCESO. Rescatando tarea... ---")
+                else:
+                    
+                    print(f"--- Email ya está siendo procesado recientemente para cliente {cliente_id} ---")
+                    return "Ya estaba enviado"
 
+            
             cliente.estado_email_bienvenida = EstadoEmail.EN_PROCESO
-            cliente.save(update_fields=['estado_email_bienvenida'])
+            cliente.intentado_en = timezone.now()
+            cliente.save(update_fields=['estado_email_bienvenida', 'intentado_en'])
             email_destino = cliente.email
             
     except ObjectDoesNotExist:

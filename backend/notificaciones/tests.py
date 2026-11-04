@@ -5,6 +5,9 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase, APIClient
 from django.contrib.auth import get_user_model
+from django.test import TestCase
+from django.utils import timezone
+from datetime import timedelta
 from django.core.cache import cache  
 from notificaciones.models import Cliente, EstadoEmail
 from notificaciones.tasks import enviar_email_tarea
@@ -136,3 +139,23 @@ class ConcurrenciaEmailTestCase(TransactionTestCase):
 
         self.cliente.refresh_from_db()
         self.assertEqual(self.cliente.estado_email_bienvenida, EstadoEmail.ENVIADO)
+        
+
+class ClienteRescateZombieTests(TestCase):
+    
+    @patch('notificaciones.tasks.send_mail')
+    def test_rescate_de_cliente_abandonado_en_proceso(self, mock_send_mail):
+        mock_send_mail.return_value = 1
+        
+        cliente = Cliente.objects.create(
+            email="zombie@portfolio.com",
+            estado_email_bienvenida=EstadoEmail.EN_PROCESO,
+            intentado_en=timezone.now() - timedelta(minutes=15)
+        )
+        
+        resultado = enviar_email_tarea(cliente.id)
+
+        cliente.refresh_from_db()
+        self.assertEqual(resultado, "Exito")
+        self.assertEqual(cliente.estado_email_bienvenida, EstadoEmail.ENVIADO)
+        mock_send_mail.assert_called_once()
